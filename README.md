@@ -1,6 +1,6 @@
 # System Design 练习
 
-目标：为系统设计面试做准备，系统掌握 system design。语言：Python。
+目标：为锻炼系统设计思维，系统掌握 system design。语言：Python。
 
 ## 规则
 

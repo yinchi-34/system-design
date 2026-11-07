@@ -16,11 +16,14 @@ class Node:
             self,
             key: Hashable,
             value: Any,
+            expire:Any,
     ):
         self.key = key
         self.value = value
         self.prev = None
         self.next = None
+        self.expire = expire
+
 
 class LRUCache:
     def __init__(
@@ -35,8 +38,8 @@ class LRUCache:
         self.clock = clock
 
         # 哨兵
-        self.head = Node(None, None)
-        self.tail = Node(None, None)
+        self.head = Node(None, None, self.clock + self.default_ttl)
+        self.tail = Node(None, None, self.clock + self.ttl)
         self.head.next = self.tail
         self.tail.prev = self.head
 
@@ -57,7 +60,7 @@ class LRUCache:
         
     def get(self, key: Hashable, default: Any = None) -> Any:
         """命中且未过期时返回值，并把 key 标为最新；否则返回 default。"""
-        if key not in self.cache:
+        if key not in self.cache or self.cache[key].expire < self.clock:
             return default
         node = self.cache[key]
         self._remove(node)
@@ -67,12 +70,13 @@ class LRUCache:
     def put(self, key: Hashable, value: Any, ttl: Optional[float] = None) -> None:
         """新增或更新 key。满了且是新 key 时淘汰最久未使用的条目。"""
         if key not in self.cache:
-            node = Node(key=key,value=value)
+            node = Node(key=key, value=value, expire=self.clock + ttl)
             self._add_to_head(node)
             self.cache[key] = node
         else:
             node = self.cache[key]
             node.value = value
+            node.expire = self.clock + ttl
             self._remove(node)
             self._add_to_head(node)
         if len(self.cache) > self.capacity:
@@ -82,7 +86,7 @@ class LRUCache:
 
     def delete(self, key: Hashable) -> bool:
         """删除 key。存在且未过期返回 True，否则返回 False。"""
-        if key not in self.cache:
+        if key not in self.cache or self.cache[key].expire < self.clock:
             return False
         node = self.cache[key]
         del self.cache[key]
@@ -91,7 +95,7 @@ class LRUCache:
         
     def __contains__(self, key: Hashable) -> bool:
         """key 存在且未过期返回 True。不改变 LRU 顺序。"""
-        return key in self.cache
+        return key in self.cache and self.cache[key].expire > self.clock
 
     def __len__(self) -> int:
         """当前存储的条目数。"""
